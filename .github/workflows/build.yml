@@ -1,0 +1,32 @@
+name: build
+
+on: [push, pull_request]
+
+jobs:
+  win-build:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - uses: msys2/setup-msys2@v2
+      with:
+        update: true
+        install: >-
+          make
+          mingw-w64-x86_64-clang
+          mingw-w64-x86_64-cmake
+          mingw-w64-x86_64-libusb
+    - name: Build
+      shell: msys2 {0}
+      run: |
+        export PATH="/mingw64/bin:$PATH"
+        mkdir build
+        cd build
+        cmake -G "MSYS Makefiles" -DCMAKE_BUILD_TYPE=Release -DDISABLE_FRONTEND=ON ..
+        make
+        cp /d/a/_temp/msys64/mingw64/bin/libusb-1.0.dll bin
+    - name: Archive build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: win64-build
+        path: build/bin/*
