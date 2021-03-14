@@ -1,0 +1,65 @@
+name: build
+
+on: [push, pull_request]
+
+jobs:
+  linux-build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt -y install libusb-1.0-0-dev
+    - name: Build
+      run: |
+        cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DDISABLE_FRONTEND=ON
+        cmake --build build
+    - name: Archive build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: linux-build
+        path: build/bin/*
+
+  macos-build:
+    runs-on: macos-13
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Build
+      run: |
+        rm /usr/local/Cellar/libusb/*/lib/libusb-1.0.0.dylib
+        cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXE_LINKER_FLAGS="-framework Security" -DDISABLE_FRONTEND=ON
+        cmake --build build
+        ln -sf /usr/local/bin build/bin/:usr:local:bin:
+        hdiutil create -volname Heimdall -srcfolder build/bin -ov -format UDZO build/bin/Heimdall.dmg
+    - name: Archive build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: macos-build
+        path: build/bin/*.dmg
+
+  win-build:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - uses: msys2/setup-msys2@v2
+      with:
+        update: true
+        install: >-
+          mingw-w64-x86_64-cmake
+          mingw-w64-x86_64-gcc
+          mingw-w64-x86_64-libusb
+    - name: Build
+      shell: msys2 {0}
+      run: |
+        cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DDISABLE_FRONTEND=ON
+        cmake --build build
+        cp /d/a/_temp/msys64/mingw64/bin/libusb-1.0.dll build/bin
+    - name: Archive build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: win64-build
+        path: build/bin/*
