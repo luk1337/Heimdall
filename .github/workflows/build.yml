@@ -41,3 +41,8 @@ jobs:
         cd build
         cmake -G "MSYS Makefiles" -DCMAKE_BUILD_TYPE=Release -DQt5Widgets_DIR=/d/a/_temp/msys64/mingw64/qt5-static/lib/cmake/Qt5Widgets ..
         make
+    - name: Archive build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: win64-build
+        path: build/bin/*
