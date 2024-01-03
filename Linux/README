@@ -475,7 +475,7 @@ be included.
 Appendix B - Installing Heimdall Suite from Source:
 
     1. First make sure you have installed build-essential, cmake, zlib1g-dev,
-       qt5-default, libusb-1.0-0-dev and OpenGL (e.g libgl1-mesa-glx and
+       qtbase5-dev, libusb-1.0-0-dev and OpenGL (e.g libgl1-mesa-glx and
        libgl1-mesa-dev).
 
        NOTE: Package names may not be absolutely identical to those above.
