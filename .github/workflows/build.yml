@@ -25,8 +25,24 @@ jobs:
         name: linux-build
         path: build/bin/*
 
-  macos-build:
-    runs-on: macos-13
+  macos-arm64-build:
+    runs-on: macos-15
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Build
+      run: |
+        sed -i .bak 's/-framework CoreFoundation/-framework CoreFoundation -framework Security/g' heimdall/CMakeLists.txt
+        cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DDISABLE_FRONTEND=ON
+        cmake --build build
+    - name: Archive build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: macos-arm64-build
+        path: build/bin/heimdall
+
+  macos-x86_64-build:
+    runs-on: macos-15-intel
 
     steps:
     - uses: actions/checkout@v4
@@ -36,13 +52,45 @@ jobs:
         rm /usr/local/Cellar/libusb/*/lib/libusb-1.0.0.dylib
         cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DDISABLE_FRONTEND=ON
         cmake --build build
-        ln -sf /usr/local/bin build/bin/:usr:local:bin:
-        hdiutil create -volname Heimdall -srcfolder build/bin -ov -format UDZO build/bin/Heimdall.dmg
+    - name: Archive build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: macos-x86_64-build
+        path: build/bin/heimdall
+
+  macos-build:
+    runs-on: macos-15
+    needs: [macos-x86_64-build, macos-arm64-build]
+
+    steps:
+    - name: Download arm64 build
+      uses: actions/download-artifact@v4
+      with:
+        name: macos-arm64-build
+        path: src/arm64
+    - name: Download x86_64 build
+      uses: actions/download-artifact@v4
+      with:
+        name: macos-x86_64-build
+        path: src/x86_64
+    - name: Delete macOS builds
+      uses: geekyeggo/delete-artifact@v6
+      with:
+        name: |
+          macos-arm64-build
+          macos-x86_64-build
+    - name: Build
+      run: |
+        lipo -create -output src/heimdall src/x86_64/heimdall src/arm64/heimdall
+        rm -rf src/arm64 src/x86_64
+        chmod +x src/heimdall
+        ln -sf /usr/local/bin src/:usr:local:bin:
+        hdiutil create -volname Heimdall -srcfolder src -ov -format UDZO Heimdall.dmg
     - name: Archive build artifacts
       uses: actions/upload-artifact@v4
       with:
         name: macos-build
-        path: build/bin/*.dmg
+        path: Heimdall.dmg
 
   win-build:
     runs-on: windows-latest
